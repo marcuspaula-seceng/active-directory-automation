@@ -1,0 +1,30 @@
+name: PowerShell Tests
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'lib/**'
+      - 'tests/**'
+      - '.github/workflows/pester.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'lib/**'
+      - 'tests/**'
+      - '.github/workflows/pester.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  pester:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Pester
+        shell: pwsh
+        run: Install-Module Pester -MinimumVersion 5.5.0 -Force -Scope CurrentUser
+      - name: Run tests
+        shell: pwsh
+        run: Invoke-Pester ./tests -CI
