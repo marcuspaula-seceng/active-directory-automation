@@ -18,7 +18,10 @@ from any real environment appears in this repository.
 
 The Active Directory scripts target **Windows PowerShell 5.1 on Windows**, with the
 `ActiveDirectory` module available through the appropriate Windows Server role or RSAT
-tooling. That is the environment these scripts are written for and validated against.
+tooling. That is the environment these scripts are written for. In this repository,
+Windows PowerShell 5.1 compatibility has been validated for parsing and character
+handling; the Active Directory operations themselves have not been executed against
+a live directory.
 
 PowerShell 7 (`pwsh`) is used by CI to run the automated helper tests. The Active Directory
 operations themselves have **not** been validated under PowerShell 7, and this repository
