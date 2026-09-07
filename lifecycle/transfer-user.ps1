@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Transfer a user between departments or sites — updates AD attributes and group memberships.
 
@@ -39,8 +39,6 @@
 #>
 
 #Requires -Modules ActiveDirectory
-Set-StrictMode -Version Latest
-$ErrorActionPreference = 'Stop'
 
 [CmdletBinding(SupportsShouldProcess)]
 param(
@@ -52,6 +50,8 @@ param(
     [Parameter()][string]$TicketReference = 'N/A',
     [Parameter()][string]$LogPath = 'C:\Logs\AD-Transfers.log'
 )
+Set-StrictMode -Version Latest
+$ErrorActionPreference = 'Stop'
 
 function Write-Log {
     param([string]$Message, [ValidateSet('INFO','WARN','ERROR','SUCCESS')]$Level = 'INFO')

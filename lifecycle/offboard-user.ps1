@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Full offboarding workflow: disable account, move OU, revoke access, schedule 30-day cleanup.
 
@@ -34,8 +34,6 @@
 #>
 
 #Requires -Modules ActiveDirectory
-Set-StrictMode -Version Latest
-$ErrorActionPreference = 'Stop'
 
 [CmdletBinding(SupportsShouldProcess)]
 param(
@@ -45,6 +43,8 @@ param(
     [Parameter()][string]$TicketReference = 'N/A',
     [Parameter()][string]$LogPath = 'C:\Logs\AD-Offboarding.log'
 )
+Set-StrictMode -Version Latest
+$ErrorActionPreference = 'Stop'
 
 # ─── Helpers ────────────────────────────────────────────────────────────────
 

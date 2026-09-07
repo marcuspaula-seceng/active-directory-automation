@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Quarterly access review report — lists all users per security group with last logon data.
 
@@ -34,8 +34,6 @@
 #>
 
 #Requires -Modules ActiveDirectory
-Set-StrictMode -Version Latest
-$ErrorActionPreference = 'Stop'
 
 [CmdletBinding()]
 param(
@@ -46,6 +44,8 @@ param(
     [Parameter()][string]$ReviewEmailTo = 'security@example.com',
     [Parameter()][string]$LogPath = 'C:\Logs\AD-AccessReview.log'
 )
+Set-StrictMode -Version Latest
+$ErrorActionPreference = 'Stop'
 
 function Write-Log {
     param([string]$Message, [ValidateSet('INFO','WARN','ERROR','SUCCESS')]$Level = 'INFO')

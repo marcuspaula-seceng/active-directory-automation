@@ -14,6 +14,21 @@ presented as having been executed against any production directory. Domains use 
 reserved `example.com` space (RFC 2606); no organisation, host, site code or account
 from any real environment appears in this repository.
 
+## Runtime
+
+The Active Directory scripts target **Windows PowerShell 5.1 on Windows**, with the
+`ActiveDirectory` module available through the appropriate Windows Server role or RSAT
+tooling. That is the environment these scripts are written for and validated against.
+
+PowerShell 7 (`pwsh`) is used by CI to run the automated helper tests. The Active Directory
+operations themselves have **not** been validated under PowerShell 7, and this repository
+makes no claim that they are.
+
+Script files that contain non-ASCII characters are stored as **UTF-8 with BOM**. Windows
+PowerShell 5.1 reads a BOM-less UTF-8 file using the system ANSI code page, which corrupts
+those characters and can break parsing; the BOM makes the encoding explicit. Do not strip
+it.
+
 ## Security principles
 
 - `Set-StrictMode -Version Latest` and terminating errors
@@ -91,9 +106,12 @@ The repository does not store a reusable onboarding password. The caller supplie
 The helper module is intentionally isolated from the Active Directory dependency so deterministic logic can be tested without a domain controller.
 
 ```powershell
-Install-Module Pester -Scope CurrentUser
+Install-Module Pester -MinimumVersion 5.5.0 -Scope CurrentUser
 Invoke-Pester ./tests
 ```
+
+The suite uses Pester 5 syntax and requires **Pester 5.5.0 or later**. The Pester version
+shipped with Windows (3.4.0) cannot run it. CI enforces the same minimum.
 
 Current tests cover:
 

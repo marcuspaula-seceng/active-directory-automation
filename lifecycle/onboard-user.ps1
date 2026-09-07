@@ -20,8 +20,6 @@
 #>
 
 #Requires -Modules ActiveDirectory
-Set-StrictMode -Version Latest
-$ErrorActionPreference = 'Stop'
 
 [CmdletBinding(SupportsShouldProcess, ConfirmImpact='Medium')]
 param(
@@ -36,6 +34,8 @@ param(
     [Parameter()][string]$TicketReference,
     [Parameter()][string]$LogPath = 'C:\Logs\AD-Onboarding.log'
 )
+Set-StrictMode -Version Latest
+$ErrorActionPreference = 'Stop'
 
 Import-Module "$PSScriptRoot/../lib/IdentityHelpers.psm1" -Force
 

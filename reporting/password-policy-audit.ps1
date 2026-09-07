@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Audit AD password policies against security best practices.
 
@@ -31,8 +31,6 @@
 #>
 
 #Requires -Modules ActiveDirectory
-Set-StrictMode -Version Latest
-$ErrorActionPreference = 'Stop'
 
 [CmdletBinding()]
 param(
@@ -43,6 +41,8 @@ param(
     [Parameter()][int]$MinLockoutThreshold = 5,
     [Parameter()][string]$LogPath = 'C:\Logs\AD-PwdPolicy.log'
 )
+Set-StrictMode -Version Latest
+$ErrorActionPreference = 'Stop'
 
 function Write-Log {
     param([string]$Message, [ValidateSet('INFO','WARN','ERROR','SUCCESS')]$Level = 'INFO')
@@ -79,7 +79,7 @@ function Test-PolicyCompliance {
             CurrentValue = $c.Current
             RequiredValue = if ($c.Op -eq 'ge') { ">= $($c.Threshold)" } else { "<= $($c.Threshold)" }
             Compliant    = $pass
-            Severity     = if (-not $pass) { if ($c.Setting -in 'MinPasswordLength','LockoutThreshold') { 'HIGH' } else { 'MEDIUM' } } else { 'OK' }
+            Severity     = if (-not $pass) { if ($c.Setting -in @('MinPasswordLength','LockoutThreshold')) { 'HIGH' } else { 'MEDIUM' } } else { 'OK' }
         })
     }
 

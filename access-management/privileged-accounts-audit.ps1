@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Audit privileged AD accounts — Domain Admins, Enterprise Admins, Schema Admins, and custom privileged groups.
 
@@ -31,8 +31,6 @@
 #>
 
 #Requires -Modules ActiveDirectory
-Set-StrictMode -Version Latest
-$ErrorActionPreference = 'Stop'
 
 [CmdletBinding()]
 param(
@@ -42,6 +40,8 @@ param(
     [Parameter()][int]$LogonStaleDays = 60,
     [Parameter()][string]$LogPath = 'C:\Logs\AD-PrivAudit.log'
 )
+Set-StrictMode -Version Latest
+$ErrorActionPreference = 'Stop'
 
 function Write-Log {
     param([string]$Message, [ValidateSet('INFO','WARN','ERROR','SUCCESS')]$Level = 'INFO')

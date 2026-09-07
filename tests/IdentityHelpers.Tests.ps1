@@ -1,4 +1,4 @@
-BeforeAll {
+﻿BeforeAll {
     Import-Module "$PSScriptRoot/../lib/IdentityHelpers.psm1" -Force
 }
 
@@ -8,7 +8,7 @@ Describe 'ConvertTo-SafeSamAccountName' {
     }
 
     It 'removes punctuation and spaces' {
-        ConvertTo-SafeSamAccountName -FirstName 'Ana' -LastName "D'Ávila Silva" | Should -Be 'adavsilva'
+        ConvertTo-SafeSamAccountName -FirstName 'Ana' -LastName "D'Ávila Silva" | Should -Be 'adavilasilva'
     }
 
     It 'respects the 20-character SAMAccountName limit' {
