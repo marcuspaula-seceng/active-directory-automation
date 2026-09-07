@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Identify AD accounts not used for 90+ days — stale account detection and reporting.
 
@@ -31,8 +31,6 @@
 #>
 
 #Requires -Modules ActiveDirectory
-Set-StrictMode -Version Latest
-$ErrorActionPreference = 'Stop'
 
 [CmdletBinding(SupportsShouldProcess)]
 param(
@@ -42,6 +40,8 @@ param(
     [Parameter()][string]$OUScope,
     [Parameter()][string]$LogPath = 'C:\Logs\AD-StaleAccounts.log'
 )
+Set-StrictMode -Version Latest
+$ErrorActionPreference = 'Stop'
 
 function Write-Log {
     param([string]$Message, [ValidateSet('INFO','WARN','ERROR','SUCCESS')]$Level = 'INFO')

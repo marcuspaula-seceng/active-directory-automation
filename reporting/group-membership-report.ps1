@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Group membership snapshot — who is in which group, exported for audit.
 
@@ -27,8 +27,6 @@
 #>
 
 #Requires -Modules ActiveDirectory
-Set-StrictMode -Version Latest
-$ErrorActionPreference = 'Stop'
 
 [CmdletBinding()]
 param(
@@ -37,6 +35,8 @@ param(
     [Parameter()][switch]$CompareWithPrevious,
     [Parameter()][string]$LogPath = 'C:\Logs\AD-GroupReport.log'
 )
+Set-StrictMode -Version Latest
+$ErrorActionPreference = 'Stop'
 
 function Write-Log {
     param([string]$Message, [ValidateSet('INFO','WARN','ERROR','SUCCESS')]$Level = 'INFO')

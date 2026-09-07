@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Weekly AD health report — locked, disabled, expired, and no-logon accounts in one view.
 
@@ -28,8 +28,6 @@
 #>
 
 #Requires -Modules ActiveDirectory
-Set-StrictMode -Version Latest
-$ErrorActionPreference = 'Stop'
 
 [CmdletBinding()]
 param(
@@ -38,6 +36,8 @@ param(
     [Parameter()][switch]$SendReport,
     [Parameter()][string]$LogPath = 'C:\Logs\AD-HealthReport.log'
 )
+Set-StrictMode -Version Latest
+$ErrorActionPreference = 'Stop'
 
 function Write-Log {
     param([string]$Message, [ValidateSet('INFO','WARN','ERROR','SUCCESS')]$Level = 'INFO')

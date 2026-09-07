@@ -2,7 +2,7 @@ name: PowerShell Tests
 
 on:
   push:
-    branches: [main]
+    branches: [main, 'validation/**']
     paths:
       - 'lib/**'
       - 'tests/**'
