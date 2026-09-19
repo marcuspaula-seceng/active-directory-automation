@@ -5,12 +5,14 @@ on:
     branches: [main, 'validation/**']
     paths:
       - 'lib/**'
+      - 'lifecycle/**'
       - 'tests/**'
       - '.github/workflows/pester.yml'
   pull_request:
     branches: [main]
     paths:
       - 'lib/**'
+      - 'lifecycle/**'
       - 'tests/**'
       - '.github/workflows/pester.yml'
 
@@ -28,3 +30,6 @@ jobs:
       - name: Run tests
         shell: pwsh
         run: Invoke-Pester ./tests -CI
+      - name: Offline lifecycle regression checks
+        shell: pwsh
+        run: pwsh -NoProfile -File ./tests/Lifecycle.Regression.ps1
