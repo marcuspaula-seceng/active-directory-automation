@@ -168,3 +168,55 @@ This lab is used to develop and demonstrate:
 - add Entra ID / Microsoft Graph equivalents as a separate, clearly scoped lab;
 - model an approval boundary between HR/request intake and privileged execution;
 - add structured JSON audit events for SIEM ingestion.
+
+
+## Architecture
+
+```mermaid
+flowchart LR
+    A[Operator input] --> B{Parameter validation}
+    B -->|invalid| X[Fail fast, nothing changes]
+    B -->|valid| C[IdentityHelpers module]
+    C --> D{ShouldProcess}
+    D -->|WhatIf| E[Planned actions only]
+    D -->|confirmed| F[Directory operation]
+    C --> G[Reporting]
+    G --> H[CSV and HTML for managers]
+    F --> I[Levelled log, no secret material]
+```
+
+Directory-dependent logic is isolated inside the module so that the surrounding flows can be
+exercised deterministically, without a live directory being present.
+
+## Validation
+
+| Layer | What it checks |
+|---|---|
+| Pester 5 unit tests | Module logic against controlled inputs |
+| GitHub Actions CI | Test run on every push, `windows-latest`, `permissions: contents: read` |
+| Strict mode | Undeclared variables fail rather than evaluating to empty |
+| `ShouldProcess` | Every destructive path supports `-WhatIf` before it acts |
+| Pre-approved scope | Operations are constrained to explicitly listed organisational units |
+
+## Limitations
+
+**These operations have not been executed against a live production directory.** The
+repository is a laboratory build. Anyone adopting it should expect to validate behaviour in a
+test forest first.
+
+- Reporting is designed for review by a human, not for automated enforcement.
+- Rollback for directory changes is not automated; the safeguard is `-WhatIf` before the fact.
+- Test coverage targets the helper module, not end-to-end directory interaction.
+
+## Lessons learned
+
+A publication readiness gate on this repository failed on its first run and surfaced that
+nine of eleven scripts did not parse, after they had been read and judged fine. The defect
+was reduced to a four-case minimal reproduction and confirmed as pre-existing. The lesson
+kept: code that looks right is not evidence, and a gate that never fails is not a gate.
+
+## Future improvements
+
+- Integration tests against a disposable test forest.
+- Structured output for ingestion by a reporting pipeline.
+- Signed releases once the repository is published.
