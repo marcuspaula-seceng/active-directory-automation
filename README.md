@@ -242,3 +242,18 @@ module; CI runs on every push under `permissions: contents: read`.
 and surfaced that nine of eleven scripts did not parse — after I had read them and judged them
 fine. It was reduced to a four-case minimal reproduction and confirmed as pre-existing. The
 rule kept: code that reads correctly is not evidence, and a gate that never fails is not a gate.
+
+## Problem
+
+Identity lifecycle work is repetitive, high-consequence and easy to get quietly wrong. Accounts
+are created, moved and disabled by hand; access is reviewed irregularly; privileged group
+membership is known only by asking. Each of those is a place where an account outlives the
+person's role, and nobody notices until an audit or an incident.
+
+This repository rebuilds those steps as automation that can be reviewed, tested and refused
+safely, rather than as scripts that are trusted because they usually work.
+
+## Technologies
+
+PowerShell 5.1 and 7 · Active Directory module · Pester 5 · GitHub Actions ·
+CSV and HTML reporting · `SecureString` for runtime credentials
