@@ -1,0 +1,74 @@
+name: portfolio-validation
+
+# Runs on every pull request so that documentation-only changes are still gated.
+# The existing test workflows filter by path; this one deliberately does not.
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: windows-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: PowerShell syntax
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $files = Get-ChildItem -Recurse -File -Include *.ps1,*.psm1
+          if (-not $files) { Write-Host 'No PowerShell files.'; exit 0 }
+          $bad = 0
+          foreach ($f in $files) {
+            $errors = $null
+            $null = [System.Management.Automation.Language.Parser]::ParseFile(
+              $f.FullName, [ref]$null, [ref]$errors)
+            if ($errors -and $errors.Count -gt 0) {
+              $bad++
+              Write-Host "FAIL $($f.Name): $($errors.Count) parse error(s)"
+            }
+          }
+          Write-Host "Parsed $($files.Count) file(s); $bad failed."
+          if ($bad -gt 0) { exit 1 }
+
+      - name: Markdown structure and Mermaid fences
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $bad = 0
+          foreach ($f in Get-ChildItem -Recurse -File -Include *.md) {
+            $lines = Get-Content -LiteralPath $f.FullName
+            $fences = ($lines | Where-Object { $_ -match '^\s*```' }).Count
+            if ($fences % 2 -ne 0) {
+              $bad++; Write-Host "FAIL $($f.Name): unbalanced code fences"
+            }
+            $mermaidOpen = ($lines | Where-Object { $_ -match '^\s*```mermaid' }).Count
+            if ($mermaidOpen -gt 0) { Write-Host "OK   $($f.Name): $mermaidOpen mermaid block(s)" }
+          }
+          if ($bad -gt 0) { exit 1 }
+          Write-Host 'Markdown structure valid.'
+
+      - name: Relative link check
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $broken = 0
+          foreach ($f in Get-ChildItem -Recurse -File -Include *.md) {
+            $text = Get-Content -LiteralPath $f.FullName -Raw
+            foreach ($m in [regex]::Matches($text, '\]\(([^)#:]+\.md)[^)]*\)')) {
+              $target = Join-Path $f.Directory.FullName $m.Groups[1].Value
+              if (-not (Test-Path -LiteralPath $target)) {
+                $broken++; Write-Host "BROKEN $($f.Name) -> $($m.Groups[1].Value)"
+              }
+            }
+          }
+          if ($broken -gt 0) { exit 1 }
+          Write-Host 'All relative Markdown links resolve.'
