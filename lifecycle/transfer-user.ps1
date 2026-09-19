@@ -99,7 +99,15 @@ try {
     }
 
     # Determine new OU
-    $newOU = "$($config.BaseOU),OU=$NewSite,$($config.DomainDN)"
+    $newOU = "OU=$NewSite,$($config.BaseOU),$($config.DomainDN)"
+    $null = Get-ADOrganizationalUnit -Identity $newOU
+    $newSiteGroups = $config.SiteGroups[$NewSite]
+    foreach ($group in $newSiteGroups) {
+        $null = Get-ADGroup -Identity $group
+    }
+    $oldDeptGroup = "GRP-Dept-$($user.Department -replace '\s','-')"
+    $newDeptGroup = "GRP-Dept-$($NewDepartment -replace '\s','-')"
+    $null = Get-ADGroup -Identity $newDeptGroup
 
     # Build attribute update hash
     $updateParams = @{ Department = $NewDepartment; Office = $NewSite }
@@ -110,55 +118,70 @@ try {
         Write-Log "New manager: $($mgr.DisplayName)" -Level INFO
     }
 
-    # Update attributes
-    if ($PSCmdlet.ShouldProcess($SamAccountName, 'Update AD Attributes')) {
-        Set-ADUser -Identity $SamAccountName @updateParams
-        Write-Log "Attributes updated: $($updateParams.Keys -join ', ')" -Level SUCCESS
+    if (-not $PSCmdlet.ShouldProcess($SamAccountName, "Transfer attributes, OU and group memberships to $NewDepartment / $NewSite")) {
+        Write-Log 'Transfer not applied; no directory changes or notification performed.' -Level INFO
+        return
     }
+    $warnings = @()
+
+    # Update attributes only after validating the destination, manager and groups.
+    Set-ADUser -Identity $SamAccountName @updateParams
+    Write-Log "Attributes updated: $($updateParams.Keys -join ', ')" -Level SUCCESS
 
     # Move OU if site changed
     if ($NewSite -ne $user.Office) {
-        if ($PSCmdlet.ShouldProcess($SamAccountName, "Move OU to $newOU")) {
-            Move-ADObject -Identity $user.DistinguishedName -TargetPath $newOU
-            Write-Log "Moved to new OU: $newOU" -Level SUCCESS
-        }
+        Move-ADObject -Identity $user.DistinguishedName -TargetPath $newOU
+        Write-Log "Moved to new OU: $newOU" -Level SUCCESS
     }
 
     # Remove old site-specific groups
-    $oldSiteGroups = $config.SiteGroups[$user.Office] | Where-Object { $_ -notlike '*VPN*' -and $_ -notlike '*Office365*' }
+    $oldSiteGroups = @()
+    if ($user.Office -and $NewSite -ne $user.Office -and $config.SiteGroups.ContainsKey([string]$user.Office)) {
+        $oldSiteGroups = @($config.SiteGroups[$user.Office] | Where-Object { $_ -notlike '*VPN*' -and $_ -notlike '*Office365*' })
+    }
     foreach ($group in $oldSiteGroups) {
         try {
             Remove-ADGroupMember -Identity $group -Members $SamAccountName -Confirm:$false
             Write-Log "Removed from old site group: $group" -Level SUCCESS
         } catch {
+            $warnings += "Could not remove group: $group"
             Write-Log "Could not remove from $group — $($_.Exception.Message)" -Level WARN
         }
     }
 
     # Assign new site-specific groups
-    $newSiteGroups = $config.SiteGroups[$NewSite]
     foreach ($group in $newSiteGroups) {
         try {
             Add-ADGroupMember -Identity $group -Members $SamAccountName
             Write-Log "Added to new site group: $group" -Level SUCCESS
         } catch {
+            $warnings += "Could not add group: $group"
             Write-Log "Could not add to $group — $($_.Exception.Message)" -Level WARN
         }
     }
 
-    # Swap department group
-    $oldDeptGroup = "GRP-Dept-$($user.Department -replace '\s','-')"
-    $newDeptGroup = "GRP-Dept-$($NewDepartment -replace '\s','-')"
-    try { Remove-ADGroupMember -Identity $oldDeptGroup -Members $SamAccountName -Confirm:$false
-          Write-Log "Removed from old dept group: $oldDeptGroup" -Level SUCCESS } catch {}
-    try { Add-ADGroupMember -Identity $newDeptGroup -Members $SamAccountName
-          Write-Log "Added to new dept group: $newDeptGroup" -Level SUCCESS } catch {
-        Write-Log "New dept group not found: $newDeptGroup — skipping" -Level WARN
+    # Swap department group only when the department changes.
+    if ($oldDeptGroup -ne $newDeptGroup) {
+        try {
+            Remove-ADGroupMember -Identity $oldDeptGroup -Members $SamAccountName -Confirm:$false
+            Write-Log "Removed from old dept group: $oldDeptGroup" -Level SUCCESS
+        } catch {
+            $warnings += "Could not remove department group: $oldDeptGroup"
+            Write-Log "Could not remove from $oldDeptGroup — $($_.Exception.Message)" -Level WARN
+        }
+        try {
+            Add-ADGroupMember -Identity $newDeptGroup -Members $SamAccountName
+            Write-Log "Added to new dept group: $newDeptGroup" -Level SUCCESS
+        } catch {
+            $warnings += "Could not add department group: $newDeptGroup"
+            Write-Log "Could not add to $newDeptGroup — $($_.Exception.Message)" -Level WARN
+        }
     }
+    $status = if ($warnings.Count) { 'Partial failure - manual follow-up required' } else { 'Completed' }
 
     # Notify
     $emailBody = @"
-User transfer completed.
+User transfer status: $status
 
 User: $($user.DisplayName) ($SamAccountName)
 Ticket: $TicketReference
@@ -168,10 +191,12 @@ Previous State:
   Site:       $($previousState.Site)
   Title:      $($previousState.Title)
 
-New State:
+Requested State (see warnings for incomplete group changes):
   Department: $NewDepartment
   Site:       $NewSite
   Title:      $(if ($NewTitle) { $NewTitle } else { $user.Title })
+
+Warnings: $($warnings -join '; ')
 
 Generated by: AD Transfer Automation
 "@
@@ -180,7 +205,8 @@ Generated by: AD Transfer Automation
         -Body $emailBody -SmtpServer $config.SmtpServer
     Write-Log "Notification sent" -Level SUCCESS
 
-    Write-Log "=== TRANSFER COMPLETE: $($user.DisplayName) → $NewDepartment / $NewSite ===" -Level SUCCESS
+    $completionLevel = if ($warnings.Count) { 'WARN' } else { 'SUCCESS' }
+    Write-Log "=== TRANSFER: $($user.DisplayName) → $NewDepartment / $NewSite | $status ===" -Level $completionLevel
 
     Write-Host "`nTransfer Summary:" -ForegroundColor Cyan
     [PSCustomObject]@{
@@ -190,6 +216,8 @@ Generated by: AD Transfer Automation
         OldDept   = $previousState.Department
         NewDept   = $NewDepartment
         NewOU     = $newOU
+        Status    = $status
+        Warnings  = $warnings
     } | Format-List
 
 } catch {

@@ -111,6 +111,7 @@ The helper module is intentionally isolated from the Active Directory dependency
 ```powershell
 Install-Module Pester -MinimumVersion 5.5.0 -Scope CurrentUser
 Invoke-Pester ./tests
+pwsh -NoProfile -File ./tests/Lifecycle.Regression.ps1
 ```
 
 The suite uses Pester 5 syntax and requires **Pester 5.5.0 or later**. The Pester version
@@ -124,13 +125,20 @@ Current tests cover:
 - invalid input handling;
 - log-safe identifier redaction.
 
+The separate offline lifecycle checks use in-memory AD, file and mail test doubles.
+They cover partial-failure reporting, manual retention, future-date rejection, target-OU
+validation and `-WhatIf` refusal. They do not validate a live directory, SMTP delivery
+or password generation.
+
 ## Operational workflows
 
 ### Lifecycle
 
 - onboarding into approved OUs and groups;
 - transfer between approved department/site structures;
-- offboarding with account disablement and access removal.
+- offboarding with account disablement, per-group removal results and a manual retention
+  review date; no account deletion is scheduled. Future termination dates are rejected
+  before directory changes.
 
 ### Access management
 
@@ -185,15 +193,15 @@ flowchart LR
     F --> I[Levelled log, no secret material]
 ```
 
-Directory-dependent logic is isolated inside the module so that the surrounding flows can be
-exercised deterministically, without a live directory being present.
+Name normalisation and identifier redaction are isolated in the helper module and tested
+without a directory. Active Directory calls remain in the lifecycle and reporting scripts.
 
 ## Validation
 
 | Layer | What it checks |
 |---|---|
 | Pester 5 unit tests | Module logic against controlled inputs |
-| GitHub Actions CI | Test run on every push, `windows-latest`, `permissions: contents: read` |
+| GitHub Actions CI | Pester and offline lifecycle checks run for changes to `lib/`, `lifecycle/`, `tests/` or their workflow, on `windows-latest` with `permissions: contents: read`; the separate validation workflow checks parsing, Markdown fences and relative links |
 | Strict mode | Undeclared variables fail rather than evaluating to empty |
 | `ShouldProcess` | Every destructive path supports `-WhatIf` before it acts |
 | Pre-approved scope | Operations are constrained to explicitly listed organisational units |
@@ -205,8 +213,11 @@ repository is a laboratory build. Anyone adopting it should expect to validate b
 test forest first.
 
 - Reporting is designed for review by a human, not for automated enforcement.
-- Rollback for directory changes is not automated; the safeguard is `-WhatIf` before the fact.
-- Test coverage targets the helper module, not end-to-end directory interaction.
+- Rollback for directory changes is not automated. `-WhatIf` previews intent; it does not
+  prove that subsequent directory operations will succeed. Offboarding and transfer
+  report partial group/GAL failures for manual follow-up.
+- Tests cover the helper module and selected lifecycle paths with test doubles, not
+  end-to-end directory interaction.
 
 ## Lessons learned
 
@@ -234,9 +245,10 @@ strict mode on, `ShouldProcess` on every destructive path, operations constraine
 pre-approved organisational units, and logging that records what happened without recording
 secret material.
 
-**Phase 3 — Automation and validation.** Directory-dependent logic was isolated into a module
-so the surrounding behaviour could be tested without a live directory. Pester 5 covers the
-module; CI runs on every push under `permissions: contents: read`.
+**Phase 3 — Automation and validation.** Name normalisation and identifier redaction were
+isolated in a helper module. Pester 5 covers those helpers without a live directory; its CI
+workflow runs on relevant path changes under `permissions: contents: read`. These checks
+do not demonstrate end-to-end directory operation.
 
 **Phase 4 — Outcome and lessons learned.** A four-stage publication gate failed on first use
 and surfaced that nine of eleven scripts did not parse — after I had read them and judged them

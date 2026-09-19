@@ -7,11 +7,11 @@
 
 ## Overview
 
-The user lifecycle in Active Directory spans four stages:
+The user lifecycle in Active Directory spans five stages:
 
 ```
 [Pre-Hire]  →  [Active Employment]  →  [Transfer]  →  [Offboarding]  →  [Deletion]
-onboard-user.ps1    (ongoing ops)    transfer-user.ps1  offboard-user.ps1  (scheduled)
+onboard-user.ps1    (ongoing ops)    transfer-user.ps1  offboard-user.ps1  (manual review)
 ```
 
 ---
@@ -31,19 +31,19 @@ onboard-user.ps1    (ongoing ops)    transfer-user.ps1  offboard-user.ps1  (sche
 | Site | HR system | Dublin / Madrid / Milan |
 | Manager | HR system | SAMAccountName required |
 | Job Title | Offer letter | Used in AD Title attribute |
-| Start Date | Offer letter | Account enabled on this date |
+| Start Date | Offer letter | Future start dates create a disabled account; activation on the start date is a separate manual action |
 
 ### Provisioning Checklist
 
 - [ ] AD account created in correct OU
-- [ ] SAMAccountName and UPN generated (format: `firstlast@corp.example.com`)
+- [ ] SAMAccountName and UPN generated (format: `[first initial][lastname]@corp.example.com`)
 - [ ] Temporary password set — `ChangePasswordAtLogon = $true`
 - [ ] Site security groups assigned (`GRP-[Site]-Users`, `GRP-VPN-EMEA`, `GRP-Office365`)
 - [ ] Department group assigned (`GRP-Dept-[DeptName]`)
 - [ ] Manager attribute set
-- [ ] Notification sent to IT helpdesk and manager
+- [ ] Notification sent to IT helpdesk and manager (manual; onboarding script does not send email)
 - [ ] Hardware provisioned in ITAM system (separate process)
-- [ ] Account start date verified — enabled on or after start date only
+- [ ] Account start date verified — perform manual activation if initially created disabled
 
 ### SAMAccountName Convention
 
@@ -103,7 +103,7 @@ All access changes require:
 
 - [ ] Account disabled
 - [ ] Password reset to random unrecoverable value
-- [ ] All group memberships removed and exported to audit CSV
+- [ ] Group removal results reviewed in audit CSV; failures require follow-up, and primary-group membership is retained
 - [ ] Account hidden from Global Address List
 - [ ] Account moved to `OU=Disabled,OU=EMEA`
 - [ ] Description updated with termination date and ticket reference
@@ -111,7 +111,7 @@ All access changes require:
 - [ ] Notification sent to IT helpdesk and Security team
 - [ ] Hardware collection confirmed with ITAM team (separate process)
 - [ ] Data retention/mailbox hold — coordinate with Legal/Compliance if required
-- [ ] 30-day retention countdown started
+- [ ] Manual retention review date recorded; no scheduled task or automatic deletion is created
 
 ### Involuntary Termination (Immediate Action Required)
 
@@ -126,7 +126,8 @@ For involuntary separations, the following must happen **before** the employee i
 
 ## Stage 5: Account Deletion (30-Day Retention)
 
-After 30-day retention period:
+Deletion is a separate manual procedure, not implemented by the offboarding script.
+After the agreed retention period:
 
 1. Verify no active legal hold or HR investigation
 2. Export mailbox data to PST if required by Legal
@@ -141,10 +142,15 @@ After 30-day retention period:
 
 ## Audit Trail
 
-All lifecycle scripts generate:
-- Log files in `C:\Logs\`
-- CSV exports for each major action
-- Email notifications to IT helpdesk and/or Security
+Implemented output differs by script:
+- All three lifecycle scripts write operation logs (default `C:\Logs\`).
+- Onboarding returns an account summary; it does not export CSV or send email.
+- Offboarding exports per-group removal status and sends a notification.
+- Transfer logs changes and sends a notification, including partial-failure warnings.
+
+The checklists also contain manual operational steps; their presence does not mean
+that the scripts automate them. Future termination dates are rejected by offboarding;
+run it only on the authorised termination date.
 
 These records support:
 - SOX audit requirements
