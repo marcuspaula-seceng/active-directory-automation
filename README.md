@@ -220,3 +220,25 @@ kept: code that looks right is not evidence, and a gate that never fails is not 
 - Integration tests against a disposable test forest.
 - Structured output for ingestion by a reporting pipeline.
 - Signed releases once the repository is published.
+
+
+## Engineering timeline
+
+**Phase 1 — Security baseline.** The recurring work was identity lifecycle: accounts created,
+moved and disabled by hand, access reviewed irregularly, privileged membership known only by
+asking. The baseline question was which of those steps could be made repeatable without
+increasing risk.
+
+**Phase 2 — Development.** Each flow was written so that the dangerous part is explicit:
+strict mode on, `ShouldProcess` on every destructive path, operations constrained to
+pre-approved organisational units, and logging that records what happened without recording
+secret material.
+
+**Phase 3 — Automation and validation.** Directory-dependent logic was isolated into a module
+so the surrounding behaviour could be tested without a live directory. Pester 5 covers the
+module; CI runs on every push under `permissions: contents: read`.
+
+**Phase 4 — Outcome and lessons learned.** A four-stage publication gate failed on first use
+and surfaced that nine of eleven scripts did not parse — after I had read them and judged them
+fine. It was reduced to a four-case minimal reproduction and confirmed as pre-existing. The
+rule kept: code that reads correctly is not evidence, and a gate that never fails is not a gate.
