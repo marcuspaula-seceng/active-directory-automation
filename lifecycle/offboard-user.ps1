@@ -1,21 +1,21 @@
 ﻿<#
 .SYNOPSIS
-    Full offboarding workflow: disable account, move OU, revoke access, schedule 30-day cleanup.
+    Full offboarding workflow: disable account, move OU, revoke access, record a manual retention review date.
 
 .DESCRIPTION
     Automates the complete offboarding process for a departing user.
     Disables the AD account, resets password, clears group memberships, moves to
-    Disabled OU, hides from address book, and creates a scheduled task for 30-day deletion.
+    Disabled OU, hides from address book, and records a retention review date. Deletion is a separate manual action.
     All actions are logged and a summary report is generated.
 
 .PARAMETER SamAccountName
     SAMAccountName of the user to offboard.
 
 .PARAMETER TerminationDate
-    Date of termination. Account disabled immediately if today or past. Defaults to today.
+    Date of termination. Today or a past date only; future dates are rejected before changes.
 
 .PARAMETER RetainDays
-    Number of days to retain the disabled account before deletion. Default: 30.
+    Days until manual retention review. No deletion task is created. Default: 30.
 
 .PARAMETER TicketReference
     HR or IT ticket reference for audit trail.
@@ -79,6 +79,10 @@ $null = New-Item -ItemType Directory -Force -Path (Split-Path $LogPath)
 Write-Log "=== OFFBOARDING START: $SamAccountName | Ticket: $TicketReference ===" -Level INFO
 
 try {
+    if ($TerminationDate.Date -gt (Get-Date).Date) {
+        throw 'Future termination dates are not scheduled. Run on the authorised termination date.'
+    }
+
     # 1. Retrieve user object
     $user = Get-ADUser -Identity $SamAccountName -Properties MemberOf, DisplayName,
         Department, Title, Manager, DistinguishedName, EmailAddress, EmployeeID,
@@ -86,64 +90,81 @@ try {
     Write-Log "User found: $($user.DisplayName) | $($user.Title) | $($user.Department)" -Level INFO
 
     # 2. Capture group membership before revoking (for audit record)
-    $originalGroups = $user.MemberOf | ForEach-Object {
+    $originalGroups = @($user.MemberOf | ForEach-Object {
         (Get-ADGroup -Identity $_).Name
-    }
+    })
     Write-Log "Group memberships captured: $($originalGroups.Count) groups" -Level INFO
 
-    # 3. Disable the account
-    if ($PSCmdlet.ShouldProcess($SamAccountName, 'Disable AD Account')) {
-        Disable-ADAccount -Identity $SamAccountName
-        Write-Log "Account disabled: $SamAccountName" -Level SUCCESS
+    # Validate the destination before making any directory changes.
+    $null = Get-ADOrganizationalUnit -Identity $config.DisabledOU
+    if (-not $PSCmdlet.ShouldProcess($SamAccountName, 'Disable account, reset password, remove groups and move to Disabled OU')) {
+        Write-Log 'Offboarding not applied; no directory changes or notification performed.' -Level INFO
+        return
     }
+    $groupResults = @()
+    $warnings = @()
+    $hiddenFromGAL = $false
+    $retentionReviewDate = (Get-Date).AddDays($RetainDays).ToString('yyyy-MM-dd')
+
+    # 3. Disable the account
+    Disable-ADAccount -Identity $SamAccountName
+    Write-Log "Account disabled: $SamAccountName" -Level SUCCESS
 
     # 4. Reset password to random unrecoverable value
     $randomPassword = [System.Web.Security.Membership]::GeneratePassword(24, 6)
     $securePassword = ConvertTo-SecureString $randomPassword -AsPlainText -Force
-    if ($PSCmdlet.ShouldProcess($SamAccountName, 'Reset Password')) {
-        Set-ADAccountPassword -Identity $SamAccountName -NewPassword $securePassword -Reset
-        Write-Log "Password reset to random value" -Level SUCCESS
-    }
+    Set-ADAccountPassword -Identity $SamAccountName -NewPassword $securePassword -Reset
+    Write-Log "Password reset to random value" -Level SUCCESS
 
     # 5. Update account description with termination info
-    Set-ADUser -Identity $SamAccountName -Description "OFFBOARDED $($TerminationDate.ToString('yyyy-MM-dd')) | Ticket: $TicketReference | Retain until: $((Get-Date).AddDays($RetainDays).ToString('yyyy-MM-dd'))"
+    Set-ADUser -Identity $SamAccountName -Description "OFFBOARDED $($TerminationDate.ToString('yyyy-MM-dd')) | Ticket: $TicketReference | Manual retention review: $retentionReviewDate"
     Write-Log "Account description updated with offboarding metadata" -Level SUCCESS
 
     # 6. Remove all group memberships (except Domain Users — cannot remove)
     foreach ($groupName in $originalGroups) {
-        if ($groupName -eq 'Domain Users') { continue }
-        try {
-            Remove-ADGroupMember -Identity $groupName -Members $SamAccountName -Confirm:$false
-            Write-Log "Removed from group: $groupName" -Level SUCCESS
-        } catch {
-            Write-Log "Could not remove from $groupName — $($_.Exception.Message)" -Level WARN
+        $groupStatus = 'Retained'
+        $removedDate = $null
+        if ($groupName -ne 'Domain Users') {
+            try {
+                Remove-ADGroupMember -Identity $groupName -Members $SamAccountName -Confirm:$false
+                Write-Log "Removed from group: $groupName" -Level SUCCESS
+                $groupStatus = 'Removed'
+                $removedDate = (Get-Date).ToString('yyyy-MM-dd')
+            } catch {
+                $groupStatus = 'Failed'
+                $warnings += "Could not remove group: $groupName"
+                Write-Log "Could not remove from $groupName — $($_.Exception.Message)" -Level WARN
+            }
+        }
+        $groupResults += [PSCustomObject]@{
+            Group = $groupName; User = $SamAccountName; Status = $groupStatus; RemovedDate = $removedDate
         }
     }
 
     # 7. Hide from Exchange/Global Address List
     try {
         Set-ADUser -Identity $SamAccountName -Replace @{ msExchHideFromAddressLists = $true }
+        $hiddenFromGAL = $true
         Write-Log "Hidden from Global Address List" -Level SUCCESS
     } catch {
+        $warnings += 'Could not hide from Global Address List'
         Write-Log "Could not hide from GAL (Exchange attribute) — $($_.Exception.Message)" -Level WARN
     }
 
     # 8. Move to Disabled OU
-    if ($PSCmdlet.ShouldProcess($SamAccountName, "Move to Disabled OU: $($config.DisabledOU)")) {
-        Move-ADObject -Identity $user.DistinguishedName -TargetPath $config.DisabledOU
-        Write-Log "Account moved to: $($config.DisabledOU)" -Level SUCCESS
-    }
+    Move-ADObject -Identity $user.DistinguishedName -TargetPath $config.DisabledOU
+    Write-Log "Account moved to: $($config.DisabledOU)" -Level SUCCESS
 
     # 9. Export group membership to CSV for audit
     $auditPath = "C:\Logs\Offboarding-$SamAccountName-$(Get-Date -Format 'yyyyMMdd').csv"
-    $originalGroups | ForEach-Object { [PSCustomObject]@{ Group = $_; User = $SamAccountName; RemovedDate = (Get-Date).ToString('yyyy-MM-dd') } } |
-        Export-Csv -Path $auditPath -NoTypeInformation
+    $groupResults | Export-Csv -Path $auditPath -NoTypeInformation
+    $groupsRemoved = @($groupResults | Where-Object Status -eq 'Removed').Count
+    $status = if ($warnings.Count) { 'Partial failure - manual follow-up required' } else { 'Completed' }
     Write-Log "Group audit exported to: $auditPath" -Level SUCCESS
 
     # 10. Send notification
-    $deletionDate = (Get-Date).AddDays($RetainDays).ToString('yyyy-MM-dd')
     $emailBody = @"
-User offboarding completed successfully.
+User offboarding status: $status
 
 User Details:
   Name:         $($user.DisplayName)
@@ -156,11 +177,12 @@ User Details:
 Actions Performed:
   - Account disabled
   - Password reset (random, unrecoverable)
-  - Removed from $($originalGroups.Count) groups (see audit CSV)
-  - Hidden from Global Address List
+  - Removed from $groupsRemoved groups (see per-group status in audit CSV)
+  - Hidden from Global Address List: $hiddenFromGAL
   - Moved to Disabled OU
 
-Scheduled Deletion: $deletionDate (after $RetainDays-day retention)
+Manual retention review: $retentionReviewDate (after $RetainDays days; no deletion scheduled)
+Warnings: $($warnings -join '; ')
 Audit CSV: $auditPath
 
 Generated by: AD Offboarding Automation
@@ -170,15 +192,20 @@ Generated by: AD Offboarding Automation
         -Body $emailBody -SmtpServer $config.SmtpServer -Attachments $auditPath
     Write-Log "Notification sent to $($config.NotifyTo -join ', ')" -Level SUCCESS
 
-    Write-Log "=== OFFBOARDING COMPLETE: $($user.DisplayName) | Deletion scheduled: $deletionDate ===" -Level SUCCESS
+    $completionLevel = if ($warnings.Count) { 'WARN' } else { 'SUCCESS' }
+    Write-Log "=== OFFBOARDING: $($user.DisplayName) | $status | Manual retention review: $retentionReviewDate ===" -Level $completionLevel
 
     Write-Host "`nOffboarding Summary:" -ForegroundColor Cyan
     [PSCustomObject]@{
         User             = $user.DisplayName
         AccountDisabled  = $true
-        GroupsRemoved    = $originalGroups.Count - 1
+        GroupsRemoved    = $groupsRemoved
+        Status           = $status
+        Warnings         = $warnings
+        HiddenFromGAL    = $hiddenFromGAL
         MovedToOU        = $config.DisabledOU
-        ScheduledDeletion = $deletionDate
+        RetentionReviewDate = $retentionReviewDate
+        DeletionScheduled = $false
         AuditFile        = $auditPath
     } | Format-List
 
