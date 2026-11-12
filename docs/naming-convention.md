@@ -41,7 +41,7 @@ Example: `Marcus Paula`
 
 | Category | Format | Example |
 |----------|--------|---------|
-| Site groups | `GRP-[Site]-[Purpose]` | `GRP-Dublin-Users`, `GRP-Madrid-VPN` |
+| Site groups | `GRP-[Site]-[Purpose]` | `GRP-SiteA-Users`, `GRP-SiteB-VPN` |
 | Department groups | `GRP-Dept-[DepartmentName]` | `GRP-Dept-Engineering`, `GRP-Dept-Finance` |
 | Application groups | `GRP-App-[AppName]-[Role]` | `GRP-App-SharePoint-ReadOnly` |
 | Privileged groups | `GRP-Priv-[Purpose]` | `GRP-Priv-ServerAdmins` |
@@ -57,7 +57,7 @@ Example: `Marcus Paula`
 ### Distribution Lists
 
 Format: `DL-[Team/Purpose]@corp.example.com`  
-Example: `DL-ITTeam@corp.example.com`, `DL-Dublin-Ops@corp.example.com`
+Example: `DL-ITTeam@corp.example.com`, `DL-SiteA-Ops@corp.example.com`
 
 ---
 
@@ -68,15 +68,15 @@ Example: `DL-ITTeam@corp.example.com`, `DL-Dublin-Ops@corp.example.com`
 ```
 DC=corp,DC=example,DC=com
 ├── OU=EMEA
-│   ├── OU=Dublin
+│   ├── OU=SiteA
 │   │   ├── OU=Users
 │   │   ├── OU=Computers
 │   │   └── OU=Groups
-│   ├── OU=Madrid
+│   ├── OU=SiteB
 │   │   ├── OU=Users
 │   │   ├── OU=Computers
 │   │   └── OU=Groups
-│   ├── OU=Milan
+│   ├── OU=SiteC
 │   │   ├── OU=Users
 │   │   ├── OU=Computers
 │   │   └── OU=Groups
@@ -88,9 +88,9 @@ DC=corp,DC=example,DC=com
 
 ### OU Naming
 
-- PascalCase for geographic names: `Dublin`, `Madrid`, `Milan`
+- PascalCase for site names: `SiteA`, `SiteB`, `SiteC`
 - Lowercase for type descriptors: `Users`, `Computers`, `Groups`
-- No abbreviations for site names (Dublin, not DUB)
+- No abbreviations for site names (SiteA, not SA)
 
 ---
 
@@ -103,7 +103,7 @@ DC=corp,DC=example,DC=com
 | Server | `[SITE]-SRV-[PURPOSE]-[#]` | `SITE-SRV-DC-01` |
 | Virtual | `[SITE]-VM-[PURPOSE]-[#]` | `SITE-VM-APP-01` |
 
-Site codes: `DUB` (Dublin) | `MAD` (Madrid) | `MIL` (Milan)
+Site codes: `SA` (SiteA) | `SB` (SiteB) | `SC` (SiteC)
 
 ---
 

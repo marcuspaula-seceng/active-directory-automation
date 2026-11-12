@@ -14,7 +14,7 @@
     New department name.
 
 .PARAMETER NewSite
-    New site location: Dublin, Madrid, or Milan.
+    New site location: SiteA, SiteB, or SiteC.
 
 .PARAMETER NewTitle
     New job title (optional — keeps current if not specified).
@@ -29,7 +29,7 @@
     Path for the operation log. Defaults to C:\Logs\AD-Transfers.log
 
 .EXAMPLE
-    .\transfer-user.ps1 -SamAccountName "jsmith" -NewDepartment "Security" -NewSite "Dublin" -NewTitle "Security Engineer" -NewManager "tdavis" -TicketReference "HR-2026-0089"
+    .\transfer-user.ps1 -SamAccountName "jsmith" -NewDepartment "Security" -NewSite "SiteA" -NewTitle "Security Engineer" -NewManager "tdavis" -TicketReference "HR-2026-0089"
 
 .NOTES
     Author:  Marcus Paula
@@ -44,7 +44,7 @@
 param(
     [Parameter(Mandatory)][ValidateNotNullOrEmpty()][string]$SamAccountName,
     [Parameter(Mandatory)][ValidateNotNullOrEmpty()][string]$NewDepartment,
-    [Parameter(Mandatory)][ValidateSet('Dublin','Madrid','Milan')][string]$NewSite,
+    [Parameter(Mandatory)][ValidateSet('SiteA','SiteB','SiteC')][string]$NewSite,
     [Parameter()][string]$NewTitle,
     [Parameter()][string]$NewManager,
     [Parameter()][string]$TicketReference = 'N/A',
@@ -74,9 +74,9 @@ $config = @{
     NotifyFrom = 'it-automation@example.com'
     NotifyTo   = 'it-helpdesk@example.com'
     SiteGroups = @{
-        Dublin = @('GRP-Dublin-Users', 'GRP-VPN-EMEA', 'GRP-Office365')
-        Madrid = @('GRP-Madrid-Users', 'GRP-VPN-EMEA', 'GRP-Office365')
-        Milan  = @('GRP-Milan-Users',  'GRP-VPN-EMEA', 'GRP-Office365')
+        SiteA = @('GRP-SiteA-Users', 'GRP-VPN-EMEA', 'GRP-Office365')
+        SiteB = @('GRP-SiteB-Users', 'GRP-VPN-EMEA', 'GRP-Office365')
+        SiteC  = @('GRP-SiteC-Users',  'GRP-VPN-EMEA', 'GRP-Office365')
     }
 }
 

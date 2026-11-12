@@ -15,8 +15,8 @@ if (-not ('System.Web.Security.Membership' -as [type])) {
 $testModule = New-Module -Name ActiveDirectory -ScriptBlock {
     function Get-ADUser {
         [CmdletBinding()] param($Identity, $Properties)
-        [PSCustomObject]@{ DisplayName='Test User'; Title='Engineer'; Department='Old'; Office='Madrid';
-            DistinguishedName='CN=Test,OU=Madrid,OU=Users,OU=EMEA,DC=corp,DC=example,DC=com';
+        [PSCustomObject]@{ DisplayName='Test User'; Title='Engineer'; Department='Old'; Office='SiteB';
+            DistinguishedName='CN=Test,OU=SiteB,OU=Users,OU=EMEA,DC=corp,DC=example,DC=com';
             MemberOf=@('GRP-Old', 'GRP-Fails'); EmailAddress='test@example.com' }
     }
     function Get-ADGroup { [CmdletBinding()] param($Identity) [PSCustomObject]@{Name=$Identity} }
@@ -90,17 +90,17 @@ try {
     Reset-TestState
     $global:LifecycleTestState.MissingOU = $true
     $caught = $false
-    try { & $transfer -SamAccountName 'testuser' -NewDepartment 'New' -NewSite 'Dublin' -Confirm:$false | Out-Null } catch { $caught = $true }
+    try { & $transfer -SamAccountName 'testuser' -NewDepartment 'New' -NewSite 'SiteA' -Confirm:$false | Out-Null } catch { $caught = $true }
     Assert-True ($caught -and $global:LifecycleTestState.Writes -eq 0) 'missing target OU must fail before attribute updates'
 
     Reset-TestState
     $global:LifecycleTestState.FailGroups = $true
-    & $transfer -SamAccountName 'testuser' -NewDepartment 'New' -NewSite 'Dublin' -Confirm:$false | Out-Null
-    Assert-True ($global:LifecycleTestState.MovedTo -eq 'OU=Dublin,OU=Users,OU=EMEA,DC=corp,DC=example,DC=com') 'transfer OU order must match onboarding'
+    & $transfer -SamAccountName 'testuser' -NewDepartment 'New' -NewSite 'SiteA' -Confirm:$false | Out-Null
+    Assert-True ($global:LifecycleTestState.MovedTo -eq 'OU=SiteA,OU=Users,OU=EMEA,DC=corp,DC=example,DC=com') 'transfer OU order must match onboarding'
     Assert-True ($global:LifecycleTestState.MailBody -match 'Partial failure' -and $global:LifecycleTestState.MailBody -match 'GRP-Dept-Old') 'department-removal failure must be surfaced'
 
     Reset-TestState
-    & $transfer -SamAccountName 'testuser' -NewDepartment 'New' -NewSite 'Dublin' -WhatIf | Out-Null
+    & $transfer -SamAccountName 'testuser' -NewDepartment 'New' -NewSite 'SiteA' -WhatIf | Out-Null
     Assert-True ($global:LifecycleTestState.Writes -eq 0 -and $global:LifecycleTestState.MailBody -eq '') 'transfer WhatIf must not mutate or notify'
     Write-Output 'PASS: six offline lifecycle regression scenarios'
 } finally {

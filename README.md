@@ -78,7 +78,7 @@ $tempPassword = Read-Host 'Temporary password' -AsSecureString
     -FirstName 'Jane' `
     -LastName 'Smith' `
     -Department 'Engineering' `
-    -Site 'Dublin' `
+    -Site 'SiteA' `
     -Manager 'jdoe' `
     -Title 'IT Engineer' `
     -TemporaryPassword $tempPassword `

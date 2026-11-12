@@ -28,7 +28,7 @@ onboard-user.ps1    (ongoing ops)    transfer-user.ps1  offboard-user.ps1  (manu
 |-------|--------|-------|
 | First Name / Last Name | Offer letter | Must match legal name |
 | Department | HR system | Maps to OU and group assignment |
-| Site | HR system | Dublin / Madrid / Milan |
+| Site | HR system | SiteA / SiteB / SiteC |
 | Manager | HR system | SAMAccountName required |
 | Job Title | Offer letter | Used in AD Title attribute |
 | Start Date | Offer letter | Future start dates create a disabled account; activation on the start date is a separate manual action |

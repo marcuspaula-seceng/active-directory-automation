@@ -16,7 +16,7 @@
 .EXAMPLE
     $tempPassword = Read-Host 'Temporary password' -AsSecureString
     .\onboard-user.ps1 -FirstName 'Jane' -LastName 'Smith' -Department 'Engineering' `
-        -Site 'Dublin' -Manager 'jdoe' -Title 'IT Engineer' -TemporaryPassword $tempPassword -WhatIf
+        -Site 'SiteA' -Manager 'jdoe' -Title 'IT Engineer' -TemporaryPassword $tempPassword -WhatIf
 #>
 
 #Requires -Modules ActiveDirectory
@@ -26,7 +26,7 @@ param(
     [Parameter(Mandatory)][ValidateNotNullOrEmpty()][string]$FirstName,
     [Parameter(Mandatory)][ValidateNotNullOrEmpty()][string]$LastName,
     [Parameter(Mandatory)][ValidateNotNullOrEmpty()][string]$Department,
-    [Parameter(Mandatory)][ValidateSet('Dublin','Madrid','Milan')][string]$Site,
+    [Parameter(Mandatory)][ValidateSet('SiteA','SiteB','SiteC')][string]$Site,
     [Parameter(Mandatory)][ValidateNotNullOrEmpty()][string]$Manager,
     [Parameter(Mandatory)][ValidateNotNullOrEmpty()][string]$Title,
     [Parameter(Mandatory)][SecureString]$TemporaryPassword,
@@ -52,14 +52,14 @@ $config = @{
     Domain   = 'corp.example.com'
     DomainDN = 'DC=corp,DC=example,DC=com'
     SiteOUs  = @{
-        Dublin = 'OU=Dublin,OU=Users,OU=EMEA,DC=corp,DC=example,DC=com'
-        Madrid = 'OU=Madrid,OU=Users,OU=EMEA,DC=corp,DC=example,DC=com'
-        Milan  = 'OU=Milan,OU=Users,OU=EMEA,DC=corp,DC=example,DC=com'
+        SiteA = 'OU=SiteA,OU=Users,OU=EMEA,DC=corp,DC=example,DC=com'
+        SiteB = 'OU=SiteB,OU=Users,OU=EMEA,DC=corp,DC=example,DC=com'
+        SiteC  = 'OU=SiteC,OU=Users,OU=EMEA,DC=corp,DC=example,DC=com'
     }
     SiteGroups = @{
-        Dublin = @('GRP-Dublin-Users','GRP-VPN-EMEA','GRP-Office365')
-        Madrid = @('GRP-Madrid-Users','GRP-VPN-EMEA','GRP-Office365')
-        Milan  = @('GRP-Milan-Users','GRP-VPN-EMEA','GRP-Office365')
+        SiteA = @('GRP-SiteA-Users','GRP-VPN-EMEA','GRP-Office365')
+        SiteB = @('GRP-SiteB-Users','GRP-VPN-EMEA','GRP-Office365')
+        SiteC  = @('GRP-SiteC-Users','GRP-VPN-EMEA','GRP-Office365')
     }
 }
 
