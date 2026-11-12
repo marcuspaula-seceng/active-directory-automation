@@ -2,6 +2,8 @@
 
 PowerShell lab for identity lifecycle, access review, privileged-account auditing and operational reporting.
 
+**Flowchart (PDF):** [how each script works, step by step](docs/ad-automation-lab-flow.pdf)
+
 This repository is designed as **security-focused engineering evidence**. It demonstrates safe automation patterns rather than claiming production deployment in any specific employer environment.
 
 ## Provenance
