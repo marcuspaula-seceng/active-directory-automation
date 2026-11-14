@@ -6,6 +6,35 @@ PowerShell lab for identity lifecycle, access review, privileged-account auditin
 
 This repository is designed as **security-focused engineering evidence**. It demonstrates safe automation patterns rather than claiming production deployment in any specific employer environment.
 
+## Quick start
+
+```powershell
+git clone https://github.com/marcuspaula-seceng/active-directory-automation.git
+cd active-directory-automation
+
+# read-only: writes an HTML dashboard + CSV, changes nothing in the directory
+.\reporting\ad-health-report.ps1 -OutputPath .\out
+```
+
+Needs Windows PowerShell 5.1 and the `ActiveDirectory` module (RSAT, or the AD DS role
+on a server). Start with the reporting scripts — they only read. Run anything under
+`lifecycle/` with `-WhatIf` first.
+
+## What is in it
+
+| Script | What it does | Writes to AD |
+|---|---|---|
+| `reporting/ad-health-report.ps1` | Locked, disabled, expired and never-logged-on accounts in one HTML + CSV view | no |
+| `reporting/group-membership-report.ps1` | Group membership snapshot, with a delta against the previous run (`-CompareWithPrevious`) | no |
+| `reporting/password-policy-audit.ps1` | Password policy against declared minimums: length, age, history, lockout threshold | no |
+| `access-management/access-review.ps1` | Quarterly access review — users per security group, with last-logon data | no |
+| `access-management/privileged-accounts-audit.ps1` | Domain, Enterprise and Schema Admins, plus custom privileged groups | no |
+| `access-management/stale-accounts-report.ps1` | Accounts unused for N days; `-DisableStale` disables them | only with `-DisableStale` |
+| `lifecycle/onboard-user.ps1` | Provision a user in a pre-approved OU, credential supplied at runtime as a `SecureString` | yes — supports `-WhatIf` |
+| `lifecycle/transfer-user.ps1` | Move a user between departments or sites, updating attributes and group membership | yes — supports `-WhatIf` |
+| `lifecycle/offboard-user.ps1` | Disable the account, move OU, revoke access, schedule retention cleanup | yes — supports `-WhatIf` |
+
+Every script takes `-LogPath` and writes a structured log with no secret material.
 ## Provenance
 
 This automation suite was developed in 2026 from professional Windows administration
