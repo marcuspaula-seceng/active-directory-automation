@@ -257,6 +257,12 @@ nine of eleven scripts did not parse, after they had been read and judged fine. 
 was reduced to a four-case minimal reproduction and confirmed as pre-existing. The lesson
 kept: code that looks right is not evidence, and a gate that never fails is not a gate.
 
+## Lab write-ups
+
+- [Narrowing a fault you cannot fix](https://marcuspaula-seceng.github.io/it-operations-writeups/narrowing-a-fault-you-cannot-fix.html)
+  — Six screenshot attempts, each timing out after 30 seconds; scoped tests,
+  corrected measurements, and no root cause identified.
+
 ## Future improvements
 
 - Integration tests against a disposable test forest.
